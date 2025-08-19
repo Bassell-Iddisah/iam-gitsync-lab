@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CloudFormation template to creates two IAM user groups, temporary password, and two IAM users.
+
+Resources:
+  NewUserTempPasswordBassell:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: "Temporary password for new IAM users"
+      Name: "iam-user-temp-password-Bassell"
+      GenerateSecretString:
+        SecretStringTemplate: "{}"
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        IncludeSpace: false
+        RequireEachIncludedType: true
+
+  S3UserGroupBassell:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: "S3ReadOnlyGroupBassell"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+        - "arn:aws:iam::aws:policy/IAMUserChangePassword"
+
+  EC2UserGroupBassell:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: "EC2ReadOnlyGroupBassell"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+        - "arn:aws:iam::aws:policy/IAMUserChangePassword"
+
+  S3UserBassell:
+    Type: AWS::IAM::User
+    Properties:
+      DependsOn:
+        - NewUserTempPasswordBassell
+        - S3UserGroupBassell
+      UserName: "S3UserBassell"
+      LoginProfile:
+        Password: !Sub "{{resolve:secretsmanager:iam-user-temp-password-Bassell:SecretString:password}}"
+        PasswordResetRequired: true
+
+  EC2UserBassell:
+    Type: AWS::IAM::User
+    Properties:
+      DependsOn:
+      - NewUserTempPasswordBassell
+      - EC2UserGroupBassell
+      UserName: "EC2UserBassell"
+      LoginProfile:
+        Password: !Sub "{{resolve:secretsmanager:iam-user-temp-password-Bassell:SecretString:password}}"
+        PasswordResetRequired: true
+
+  S3UserToGroupAddition:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref S3UserGroupBassell
+      Users:
+        - !Ref S3UserBassell
+
+  EC2UserToGroupAddition:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref EC2UserGroupBassell
+      Users:
+        - !Ref EC2UserBassell
+
+Outputs:
+  IAMLoginURL:
+    Description: "The URL for IAM users to log in to the AWS Console."
+    Value: !Sub "https://console.aws.amazon.com/console/home?region=${AWS::Region}"
+  SecretARN:
+    Description: "The ARN of the secret containing the temporary password."
+    Value: !Ref NewUserTempPassword

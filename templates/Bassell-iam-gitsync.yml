@@ -52,3 +52,16 @@ Resources:
       LoginProfile:
         Password: !Sub "{{resolve:secretsmanager:${NewUserTempPassword}}}"
         PasswordResetRequired: true
+  
+  S3User2:
+    Type: 'AWS::IAM::User'
+    DependsOn:
+        - NewUserTempPassword
+        - S3UserGroup
+    Properties:
+      UserName: S3User2
+      Groups:
+        - !Ref S3UserGroup
+      LoginProfile:
+        Password: !Sub "{{resolve:secretsmanager:${NewUserTempPassword}}}"
+        PasswordResetRequired: true
